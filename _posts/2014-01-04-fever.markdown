@@ -1,5 +1,6 @@
 ---
 layout: mathpost
+title: 泊松分布与女儿发烧
 ---
 
 # 泊松分布与女儿发烧 #
