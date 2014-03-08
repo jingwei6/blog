@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 ---
 
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
@@ -14,17 +14,4 @@ layout: default
   });
 </script>
 
-<div id="post">
 {{ content }}
-</div>
-
-<div id="related">
-  <hr/>
-  <p/>
-  更多叽歪：
-  <ul class="posts">
-    {% for post in site.related_posts limit:3 %}
-      <li><span>{{ post.date | date: "%Y-%m-%d" }}</span> &raquo; <a href="{{ post.url }}">{{ post.title }}</a></li>
-    {% endfor %}
-  </ul>
-</div>
