@@ -40,12 +40,12 @@ title: 破解Revealapp的试用时间限制
 ## 内存中的NSDate对象 ##
 NSDate对象应该有两个域，第一个“isA”是所有ObjC对象都有的类型指针，指向NSDate类型对象。第二个是个双精度浮点数，表示从2001年1月1日到现在的时间间隔，单位是秒。
 
-<table frame="box" border="1">
+<table class="tg">
   <tr>
-    <td>pointer: isA </td>
+    <td class="tg-031e">pointer: isA </td>
   </tr>
-    <tr>
-    <td>double: _timeIntervalSinceReferenceDate</td>
+  <tr>
+    <td class="tg-031e">double: _timeIntervalSinceReferenceDate</td>
   </tr>
 </table>
 

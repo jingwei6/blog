@@ -1,0 +1,186 @@
+---
+layout: post
+title: 浅析lua脚本语言
+---
+
+# 浅析lua脚本语言 #
+
+lua脚本语言以其精悍高效的特点，被广泛应用于游戏插件或上层模块的编写。本文浅析其实现机制。
+
+* 分析方法
+
+无论何种程序语言，可以从三个层次来理解：语法层面，指令层面和运行时过程。
+而一种语言的内容是纷繁复杂的，即使是像lua这样简单的语言，其用法也可以写成一本书。
+所以我们不可能对语言的每一个细节，都从上述三个层次去分析。而是选取该语言中最重要的特性去理解。
+
+* 分析对象
+
+我们会分析lua中“唯一的”数据结构table，跟Obj-C中后引入的block类似的closure，以及通过加法运算来管窥lua的运行时过程。
+
+<ul>
+<ul>
+<li><p>table</p></li>
+
+从语法层面来讲，lua中的table具有脚本语言一贯具有的灵活性。比如，下面四种对table的初始化，都是等价的。<p>
+
+a = {x=10, y=20} <p>
+a = {["x”]=10, ["y”]=20} <p>
+a = {}; a.x=10; a.y=20 <p>
+a = {}; a[“x”]=10; a[“y”]=20 <p>
+
+而对于下标是数字的table，以下两种写法也是等价的。<p>
+
+a = {x, y} <p>
+a = {}; a[1] = x; a[2] = y; <p>
+
+当lua解析器看到大括号“{”的时候，就会生成lua虚拟机指令OP_NEWTABLE。
+lua的虚拟机指令都是32位的，开始的6个bit是操作码，后面的26bit是操作数。
+OP_NEWTABLE就是用来创建一个table的操作码。<p>
+
+虚拟机在执行OP_NEWTABLE指令的时候，会在堆上创建table对象。
+table对象的内容如下图所示。实际上，因为lua的虚拟机是用ANCI C实现的，准确的说应该是table结构，而不是对象。
+但是为了方便用UML来描述，我们还是借用面向对象的概念。<p>
+
+<img src="/images/luaDataStruct.jpg" alt="lua虚拟机核心数据结构" /> <p>
+
+在table对象众多的成员中，最重要的是其中三个：<p>
+Table * metatable <p>
+TValue * array <p>
+Node * node <p>
+
+其中metatable是元表，对table行为的定义，如运算符重载、方法的继承等，都是通过元表来进行的。
+这是相对高级的话题，不在此文讨论之列。 <p>
+
+array和node都是table中数据存放的地方：下标是数字的值以数组的形式存放在array中；下标是字符串的值存放在hash表node中。
+明白了Table的实现机制，就能灵活使用了。比如，用table来实现链表：<p>
+
+<pre>
+list = {}
+
+function list.new()
+  return {first = 0, last = -1}
+end
+
+function list.pushfirst(list, value)
+  local first = list.first - 1      //  计算新的下标
+  list.first = first                //  更新hash表
+  list[first] = value               //  更新array
+end
+</pre>
+<p>
+
+其实上述链表的实现就是同时运用了table中的array和hash，first和last下标是字符串，它们被存放在hash表中，其值表示数组的起始下标和结尾下标。而真正的链表的数据都存放在array中。
+
+
+<li><p>closure</p></li>
+closure(闭包)能使得局部函数可以直接访问在它外面定义的局部变量，比如：
+
+<pre>
+newCounter = function() 
+  local i = 0 
+  return function()  
+    i = i + 1 
+    return i 
+  end 
+end 
+c1 = newCounter()
+print(c1)
+print(c1())
+print(c1())
+
+会输出：
+function: 1716EA70
+1
+2
+</pre>
+<p>
+
+其背后的实现机制也在上述类图中：CClosure包含了一个函数和一个upvalue，其upvalue就是外部的局部变量的拷贝。
+
+<li><p>加法运算</p></li>
+
+当lua虚拟机执行到加法操作符OP_ADD时，就会执行算数运算arith_op <p>
+
+<pre>
+vmcase(OP_ADD,
+        arith_op(luai_numadd, TM_ADD);
+      )
+</pre>
+<p>
+arith_op的定义是这样的：
+<pre>
+#define arith_op(op,tm) { \
+        TValue *rb = RKB(i); \
+        TValue *rc = RKC(i); \
+        if (ttisnumber(rb) && ttisnumber(rc)) { \
+          lua_Number nb = nvalue(rb), nc = nvalue(rc); \
+          setnvalue(ra, op(L, nb, nc)); \
+        } \
+        else { Protect(luaV_arith(L, ra, rb, rc, tm)); } }
+</pre>
+<p>
+对于加法，上面的op就是luai_numadd，按下面定义展开
+<p>
+<pre>
+#define luai_numadd(L,a,b) ((a)+(b))
+</pre>
+<p>
+也就是说，对于lua加法指令，虚拟机完成三步操作：<p>
+1. 解析出TValue*类型的操作数 ra, rb 和 rc <p>
+2. 从rb和rc的TValue中得到数值，lua_TValue.Value.n <p>
+3. 将rb和rc的数值相加，并通过setnvalue放回到ra的lua_TValue.Value.n中 <p>
+
+</ul>
+</ul>
+
+
+* 附录
+
+lua源代码重要文件及其说明。
+
+<table class="tg">
+  <tr>
+    <th class="tg-031e">文件名</th>
+    <th class="tg-s6z2">说明</th>
+  </tr>
+  <tr>
+    <td class="tg-031e">luac.c</td>
+    <td class="tg-s6z2">lua编译器，可将生成的字节码写入文件</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lua.c</td>
+    <td class="tg-s6z2">可独立运行的解释器</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lparser.c</td>
+    <td class="tg-s6z2">Lua语法解析器</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lcode.c</td>
+    <td class="tg-s6z2">Lua指令生成器（编码器）。luaK_code负责把编码好的指令(Instruction, 其实就是lua_int32)放到指令数组中。</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lopcodes.c</td>
+    <td class="tg-s6z2">Lua虚拟机的操作码。lua的虚拟机指令是整齐的，都是32位。除了有算数运算、逻辑运算、跳转(jmp/call)等常见CUP指令外，还有lua特有的操作Table\Closure\Upvalue的指令。</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lvm.c</td>
+    <td class="tg-s6z2">Lua虚拟机, luaV_execute 是解释器的主循环</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lmem.c</td>
+    <td class="tg-s6z2">Lua内存管理</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lgc.c</td>
+    <td class="tg-s6z2">luaC_newobj创建对象并加入gc</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">lobject.c</td>
+    <td class="tg-s6z2">Lua语言中数据结构的C描述，比如closure和table</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">ltable.c</td>
+    <td class="tg-s6z2">table相关的操作</td>
+  </tr>
+</table>
