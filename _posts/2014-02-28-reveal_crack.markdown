@@ -79,9 +79,9 @@ NSLog(@"\n%@", date);
 把IBAApplicationPersistenceData这一项删除就是了。
 
 ## 后记 ##
-有同学留言说上面的方法不起作用，于是叽歪刘写了个[注册机](/images/reveal_crack.app.zip)。
+有同学留言说上面的方法不起作用(问题的原因请参考另一篇blog[谁动了我的plist](/2015/04/19/plist.html))，于是叽歪刘写了个[补丁](/images/reveal_crack.app.zip)。
 
-注册机是用10.9的SDK编译的，在Reveal1.0.3（2287）上测试通过。
+补丁是用10.9的SDK编译的，在Reveal1.0.3（2287）上测试通过。
 
 下载解压后，用右键的“打开”菜单运行程序。亲，叽歪刘只能帮你到这里了。
 

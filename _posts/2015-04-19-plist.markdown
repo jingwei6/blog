@@ -1,0 +1,28 @@
+---
+layout: post
+title: 谁动了我的plist
+---
+
+# 谁动了我的plist #
+
+在[《破解Revealapp的试用时间限制》](/2014/02/28/reveal_crack.html)这篇blog里，笔者在提供补丁之前，曾经提供了一种通过修改plist中的安装时间来延长试用的方法。这个方法对很多留言的同学来说不起作用，当初笔者也没有深究，就继而提供了补丁来直接修改可执行文件。不过这些同学的修改plist不起作用的这个问题却一直留在笔者心中。直到最近，看到一篇文章(参考资料1)，才恍然大悟。
+
+原来在OSX的10.9版本之前，plist的读写都是APP自己来进行的，但升级到10.9的时候，有一个专门的精灵进程来负责plist文件的读写，那就是cfprefsd。
+
+![精灵进程cfprefsd](/images/cfprefsd.png)
+
+如上图所示，所有的plist读写都是通过进程cfprefsd来进行的，也就是说cfprefsd会对plist数据信息缓存。这就是为什么即使你修改了plist，APP读到的仍然是以前的数据。
+
+要解决这个问题可以用如下步骤：
+
+1. 退出plist对应的APP
+2. 在终端中运行killall cfprefsd杀掉所有的cfprefsd进程
+3. 修改plist
+4. 再运行APP，此时新的plist就会起作用了
+
+<br/>
+
+---
+参考资料：
+
+1. [How-to: Replace preference files in Mavericks](http://manytricks.com/blog/?p=3049)
