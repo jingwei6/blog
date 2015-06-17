@@ -1,0 +1,63 @@
+---
+layout: post
+title: 一种应用内付费(IAP)的破解方法
+---
+
+# 一种应用内付费(IAP)的破解方法 #
+# A method to crack In-App Purchase #
+
+![Helicopter Sim Screen Shot](/images/helicopter_train.png)
+
+自从用iMac以来，再也没有在电脑上玩儿过游戏，即使是最喜欢的飞行模拟类的游戏。周末在App Store上看到一款排名靠前的直升飞机模拟游戏－－Helicopter Sim - Hellfire Squadron，尽管mac上的游戏不能期望太高，不过聊胜于无，于是下载下来玩儿了一下，配合我那已经封尘多年的游戏手柄，几局下来，已能熟练控制，pitch/yaw/roll，加上攻击时的摇滚音乐，也让我乐在其中。不过很快缺省的关卡都被我玩完了，要玩儿更多的关卡只能应用内付费购买了。
+
+![Helicopter Sim IAP Page](/images/helicopter_pay.png)
+
+这自然激起了我对应用内付费(IAP)的兴趣。关于IAP的知识，在苹果的开发者网站都能找到（参考资料1）。
+IAP部署图如下所示：
+
+![IAP deployment](/images/IAP_deployment.png)
+
+苹果通过提供StoreKit框架来帮助客户端实现IAP，StoreKit和App Store之间的通讯，主要提供两个功能：
+
+1. StoreKit从App Store取回可以提供的内购项目
+2. StoreKit向App Store提出付费请求，并把付费完成的消息通知客户端
+
+至于客户端和“Your Server”的通讯，其实跟IAP框架没什么关系，开发者根据自己的情况，决定用户付费成功后，是从服务器下载数据，还是直接暴露新的功能给用户。
+“幸运”的是，Helicopter Sim这款游戏，内购的关卡并不需要从服务器下载。
+
+#那么我们就有机会在一次失败的购买过程中，在Store Kit把购买失败的消息通知给客户端之前，把购买失败的消息篡改成购买成功的消息。#
+Store Kit中购买的状态有以下5种，
+
+enum {<br/>
+SKPaymentTransactionStatePurchasing,<br/>
+SKPaymentTransactionStatePurchased,<br/>
+SKPaymentTransactionStateFailed,<br/>
+SKPaymentTransactionStateRestored,<br/>
+SKPaymentTransactionStateDeferred,<br/>
+};<br/>
+typedef NSInteger SKPaymentTransactionState;
+
+它们都封装在SKPaymentTransaction中，通过SKPaymentTransactionObserver的回调函数<br/>
+(void)paymentQueue:(SKPaymentQueue *)queue updatedTransactions:(NSArray *)transactions<br/>
+告诉给客户端。
+
+那么我们就可以在上述回调函数中加入如下逻辑：
+
+if (SKPaymentTransaction.transactionState == SKPaymentTransactionStateFailed)<br/>
+{<br/>
+   SKPaymentTransaction.transactionState = SKPaymentTransactionStatePurchased<br/>
+}<br/>
+
+具体的实现方法，发挥一下想象，可以用补丁在代码中加入上述逻辑，也可以用调试器动态的修改内存或者寄存器。
+上述逻辑准备好以后，点击内购项目进行购买，在弹出对话框要求输入App Store的密码的时候，点击取消，这时上面的逻辑就会起作用。
+当这一切结束的时候，你就会发现，你点击的关卡已经出现在你的游戏中:) 
+
+![Helicopter Sim New Scenario](/images/helicopter_scenario.png)
+
+
+<br/>
+
+---
+参考资料：
+
+1. [In-App Purchase Programming Guide](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StoreKitGuide/Introduction.html)
